@@ -15,7 +15,8 @@ function Home() {
     data: null,
   });
 
-  const [user, setUser] = useState(null); // State to store user data
+  const [user, setUser] = useState(null);
+  const [AllNotes, setAllNotes] = useState([]);
   console.log(axiosinstance);
   useEffect(() => {
     // Define a function to fetch user data
@@ -32,21 +33,38 @@ function Home() {
     // Call the function to fetch user data on component mount
     getUser();
   }, []);
+
+  const getAllNotes = async () => {
+    try {
+      const response = await axiosinstance.get("/get-all-notes");
+      setAllNotes(response.data.notes);
+      console.log(response.data.notes);
+    } catch (error) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    getAllNotes();
+  }, []);
   return (
     <div className="text-red-300">
       <Navbar user={user} />
       <div className="container mx-auto">
         <div className="grid grid-cols-3 gap-4 mt-8">
-          <NoteCard
-            title="Meeting on 7th April"
-            date="3rd Apr 2024"
-            content="Meeting on 7th April Meeting on 7th April"
-            tags="#Meeting"
-            isPinned={true}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onPinNote={() => {}}
-          />
+          {AllNotes.map((item, index) => (
+            <NoteCard
+              key={item._id}
+              title={item.title}
+              date={new Date(item.createdOn).toLocaleDateString()} // Convert createdOn to a readable date format
+              content={item.content}
+              tags={item.tags.join(" #")} // Convert tags array to a string
+              isPinned={item.isPinned}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onPinNote={() => {}}
+            />
+          ))}
         </div>
       </div>
       <button
@@ -69,7 +87,18 @@ function Home() {
             backgroundColor: "rgba(0,0,0,0.2)",
           },
         }}>
-        <AddEditNotes />
+        <AddEditNotes
+          type={openAddeditNotesModel.type}
+          noteData={openAddeditNotesModel.data}
+          onClose={() => {
+            setopenAddeditNotesModel({
+              isShown: true,
+              type: "add",
+              data: null,
+            });
+          }}
+          getAllNotes={getAllNotes}
+        />
       </Modal>
     </div>
   );
