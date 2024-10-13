@@ -162,10 +162,10 @@ app.post("/add-note", authenticateToken, async (req, res) => {
 });
 // EDit
 app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
-  console.log(req.user);
   const noteId = req.params.noteId; // Correctly accessing params from req
   const { title, content, tags, isPinned } = req.body;
-  const { user } = req.user.user;
+
+  const { user } = req.user.userId;
 
   if (!title && !tags && !content) {
     return res
@@ -174,7 +174,7 @@ app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
   }
 
   try {
-    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    const note = await Note.findOne({ _id: noteId });
 
     if (!note) {
       return res.status(400).json({ error: true, message: "Note not found" });
@@ -241,16 +241,19 @@ app.delete("/delete-note/:noteId", authenticateToken, async (req, res) => {
   const { noteId } = req.params;
 
   // Extract userId from the nested structure
-  const {
-    user: {
-      user: { _id: userId },
-    },
-  } = req.user;
+  // const {
+  //   user: {
+  //     user: { _id: userId },
+  //   },
+  // } = req.user;
+  console.log(req?.params.noteId);
+  console.log(req?.user?.userId);
+  const userId = req?.user?.userId;
 
   try {
     // Find the note and ensure it belongs to the authenticated user
     const note = await Note.findOneAndDelete({
-      _id: noteId,
+      _id: req?.params.noteId,
       userId: userId, // Ensure the user owns the note
     });
 
@@ -277,19 +280,19 @@ app.delete("/delete-note/:noteId", authenticateToken, async (req, res) => {
 // Pinned
 app.put("/pin-note/:noteId", authenticateToken, async (req, res) => {
   // Extract noteId from the route params
-  const { noteId } = req.params;
-
+  const { noteId } = req.params.noteId;
+  console.log(req.params.noteId);
   // Extract userId from the nested structure
-  const {
-    user: {
-      user: { _id: userId },
-    },
-  } = req.user;
+  const userId = req?.user?.userId;
+  console.log(req?.user?.userId);
 
   try {
     // Find the note that belongs to the user
-    const note = await Note.findOne({ _id: noteId, userId: userId });
-
+    const note = await Note.findOne({
+      _id: req?.params.noteId,
+      userId: userId,
+    });
+    console.log(note);
     if (!note) {
       return res.status(404).json({
         error: true,
@@ -336,6 +339,42 @@ app.get("/get-users", authenticateToken, async (req, res) => {
       error: false,
       users,
       message: "All users retrieved successfully",
+    });
+  } catch (err) {
+    console.error("Error stack:", err.stack); // Log full error stack
+    return res.status(500).json({
+      error: true,
+      message: "Internal server error",
+    });
+  }
+});
+
+app.get("/search-notes", authenticateToken, async (req, res) => {
+  // Extract userId from the request
+  const userId = req?.user?.userId;
+  console.log("User ID:", userId);
+
+  // Get search query from query parameters
+  const { query } = req.query; // e.g., /search-notes?query=someText
+
+  try {
+    // Find notes that belong to the user and match the search query
+    const notes = await Note.find({
+      userId: userId,
+      $or: [
+        { title: { $regex: query, $options: "i" } }, // Case-insensitive search
+        { content: { $regex: query, $options: "i" } },
+        { tags: { $regex: query, $options: "i" } },
+      ],
+    });
+
+    // Return found notes or a message if none found
+    return res.json({
+      error: false,
+      notes,
+      message: notes.length
+        ? "Notes found"
+        : "No notes found matching your search",
     });
   } catch (err) {
     console.error("Error stack:", err.stack); // Log full error stack
