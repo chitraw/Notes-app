@@ -7,6 +7,7 @@ import Modal from "react-modal";
 
 import axiosinstance from "../../utils/axiosinstance";
 import { useNavigate } from "react-router-dom";
+
 function Home() {
   const navigate = useNavigate();
   const [openAddeditNotesModel, setopenAddeditNotesModel] = useState({
@@ -17,20 +18,19 @@ function Home() {
 
   const [user, setUser] = useState(null);
   const [AllNotes, setAllNotes] = useState([]);
-  console.log(axiosinstance);
+  const [searchQuery, setSearchQuery] = useState(false); // State for search query
+  const [searchResults, setSearchResults] = useState([]);
   useEffect(() => {
-    // Define a function to fetch user data
     const getUser = async () => {
       try {
         const response = await axiosinstance.get("/get-users");
-        setUser(response.data); // Assuming response.data contains user info
+        setUser(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
         navigate("/login");
       }
     };
 
-    // Call the function to fetch user data on component mount
     getUser();
   }, []);
 
@@ -38,31 +38,79 @@ function Home() {
     try {
       const response = await axiosinstance.get("/get-all-notes");
       setAllNotes(response.data.notes);
-      console.log(response.data.notes);
     } catch (error) {
-      console.log(err);
+      console.log(error);
     }
   };
 
   useEffect(() => {
     getAllNotes();
   }, []);
+
+  const handleEditNote = (note) => {
+    setopenAddeditNotesModel({
+      isShown: true,
+      type: "edit",
+      data: note, // Pass the current note data to the modal
+    });
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    console.log(noteId);
+    try {
+      const response = await axiosinstance.delete("/delete-note/" + noteId);
+
+      if (response.data) {
+        getAllNotes();
+      }
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
+  };
+
+  const handlePinNote = async (noteId) => {
+    console.log("Note ID:", noteId);
+    try {
+      const response = await axiosinstance.put("/pin-note/" + noteId, {
+        isPinned: noteId, // Toggle the isPinned status
+      });
+
+      if (response.data) {
+        getAllNotes(); // Refresh the list after pinning/unpinning
+      }
+    } catch (error) {
+      console.error("Error pinning note:", error);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      const response = await axiosinstance.get(
+        `/search-notes?query=${searchQuery}`
+      );
+      if (!response.data.error) {
+        setSearchQuery(true);
+      }
+    } catch (error) {
+      console.error("Error searching notes:", error);
+    }
+  };
   return (
     <div className="text-red-300">
-      <Navbar user={user} />
+      <Navbar user={user} onSearchNote={handleSearch} />
       <div className="container mx-auto">
         <div className="grid grid-cols-3 gap-4 mt-8">
-          {AllNotes.map((item, index) => (
+          {AllNotes.map((item) => (
             <NoteCard
               key={item._id}
               title={item.title}
-              date={new Date(item.createdOn).toLocaleDateString()} // Convert createdOn to a readable date format
+              date={new Date(item.createdOn).toLocaleDateString()}
               content={item.content}
-              tags={item.tags.join(" #")} // Convert tags array to a string
+              tags={item.tags.join(" #")}
               isPinned={item.isPinned}
-              onEdit={() => {}}
-              onDelete={() => {}}
-              onPinNote={() => {}}
+              onEdit={() => handleEditNote(item)}
+              onDelete={() => handleDeleteNote(item._id)}
+              onPinNote={() => handlePinNote(item._id)}
             />
           ))}
         </div>
@@ -92,7 +140,7 @@ function Home() {
           noteData={openAddeditNotesModel.data}
           onClose={() => {
             setopenAddeditNotesModel({
-              isShown: true,
+              isShown: false,
               type: "add",
               data: null,
             });

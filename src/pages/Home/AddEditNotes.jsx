@@ -6,7 +6,7 @@ function AddEditNotes({ noteData, type, getAllNotes, onClose }) {
   const [content, setContent] = useState(noteData?.content || "");
   const [tag, setTag] = useState("");
   const [tags, setTags] = useState(noteData?.tags || []);
-
+  console.log(noteData);
   const handleAddTag = () => {
     if (tag.trim() !== "") {
       setTags([...tags, tag]);
@@ -14,9 +14,30 @@ function AddEditNotes({ noteData, type, getAllNotes, onClose }) {
     }
   };
 
+  // const HandleNewNote = async () => {
+  //   try {
+  //     const response = await axiosinstance.post("add-note", {
+  //       title,
+  //       content,
+  //       tags,
+  //     });
+
+  //     if (response.data) {
+  //       getAllNotes();
+  //       onClose();
+  //     }
+  //   } catch (error) {
+  //     console.error("Error adding note:", error);
+  //   }
+  // };
+
+  const handleRemoveTag = (index) => {
+    setTags(tags.filter((_, i) => i !== index));
+  };
   const HandleNewNote = async () => {
+    const noteId = noteData?._id;
     try {
-      const response = await axiosinstance.post("add-note", {
+      const response = await axiosinstance.put("/edit-note/" + noteId, {
         title,
         content,
         tags,
@@ -29,10 +50,6 @@ function AddEditNotes({ noteData, type, getAllNotes, onClose }) {
     } catch (error) {
       console.error("Error adding note:", error);
     }
-  };
-
-  const handleRemoveTag = (index) => {
-    setTags(tags.filter((_, i) => i !== index));
   };
 
   return (
@@ -92,7 +109,7 @@ function AddEditNotes({ noteData, type, getAllNotes, onClose }) {
       <button
         className="bg-blue-600 font-medium w-full mt-5 p-3"
         onClick={HandleNewNote}>
-        ADD
+        {type === "edit" ? "UPDATE" : "ADD"}
       </button>
     </div>
   );

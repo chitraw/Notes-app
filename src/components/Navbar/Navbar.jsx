@@ -2,14 +2,16 @@ import React, { useState } from "react";
 import Profolio from "../Card/Profolio";
 import SearchBox from "../SearchBox/SerachBox";
 import { useNavigate } from "react-router-dom";
-function Navbar(user) {
+function Navbar(user, onSearchNote) {
   const [SearchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   function handleDelete() {
     setSearchQuery("");
   }
   function handleSearch() {
-    // Add your search functionality here
+    if (SearchQuery) {
+      onSearchNote(SearchQuery);
+    }
   }
   const LOgoutOut = () => {
     localStorage.clear();
